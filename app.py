@@ -374,7 +374,7 @@ else:
         st.markdown(f"""
         <div class="final-result">
             <h2>{label}</h2>
-            <p>Class {final} &nbsp;·&nbsp; Fused from {len(results)} model(s) &nbsp;·&nbsp; Equal weight averaging</p>
+            <p>Class {final} &nbsp;·&nbsp; Fused from {len(results)} model(s) &nbsp;·&nbsp; </p>
         </div>
         """, unsafe_allow_html=True)
 
