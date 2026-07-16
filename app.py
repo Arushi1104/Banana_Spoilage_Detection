@@ -7,19 +7,15 @@ from PIL import Image
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
-# ─────────────────────────────────────────────
 # PAGE CONFIG
-# ─────────────────────────────────────────────
 
 st.set_page_config(
     page_title="BananaCheck — Ripeness Detector",
-    page_icon="🍌",
+    page_icon="",
     layout="wide"
 )
 
-# ─────────────────────────────────────────────
 # STYLING
-# ─────────────────────────────────────────────
 
 st.markdown("""
 <style>
@@ -160,9 +156,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
 # CONSTANTS
-# ─────────────────────────────────────────────
 
 GAS_ENV_FEATURES = [
     'Temp-int', 'Press-int', 'Humid-int',
@@ -179,17 +173,17 @@ SPECTER_FEATURES = [
 ALL_FEATURES = GAS_ENV_FEATURES + SPECTER_FEATURES
 
 LABEL_MAP = {
-    0: ("Underripe", "🟢", "#3a7a3a"),
-    1: ("Ripe", "🟡", "#8a7a10"),
-    2: ("Overripe", "🟠", "#8a5010"),
-    3: ("Rotten", "🔴", "#7a2020"),
-    4: ("Severely Rotten", "⚫", "#3a2a2a"),
+    0: ("Underripe", "", "#3a7a3a"),
+    1: ("Ripe",      "", "#8a7a10"),
+    2: ("Overripe",  "", "#8a5010"),
+    3: ("Rotten",    "", "#7a2020"),
+    4: ("Severely Rotten", "", "#3a2a2a"),
 }
 
 MODEL_PATHS = {
-    "Gas & Env":  "models/random_forest_model_gas&env.pkl",
-    "Specter":    "models/random_forest_model_specter.pkl",
-    "All Sensors":"models/random_forest_model_all.pkl",
+    "Gas & Env":   "models/random_forest_model_gas&env.pkl",
+    "Specter":     "models/random_forest_model_specter.pkl",
+    "All Sensors": "models/random_forest_model_all.pkl",
 }
 
 MODEL_FEATURES = {
@@ -198,20 +192,17 @@ MODEL_FEATURES = {
     "All Sensors": ALL_FEATURES,
 }
 
-# ─────────────────────────────────────────────
 # MODEL LOADER
-# ─────────────────────────────────────────────
 
 @st.cache_resource
 def load_model(name, path, features):
     try:
         if os.path.exists(path):
             model = joblib.load(path)
-            return model, None  # (model, scaler) — scaler may be embedded
+            return model, None
         else:
             raise FileNotFoundError(f"{path} not found")
     except Exception as e:
-        # Fallback dummy model so app doesn't crash
         scaler = StandardScaler()
         X_dummy = np.random.rand(50, len(features))
         y_dummy = np.random.randint(0, 5, 50)
@@ -224,25 +215,17 @@ def predict_numeric(model_obj, scaler, values):
     X = np.array(values, dtype=float).reshape(1, -1)
     if scaler is not None:
         X = scaler.transform(X)
-    # Handle if model is a pipeline (scaler embedded)
     return int(model_obj.predict(X)[0])
 
-# ─────────────────────────────────────────────
 # IMAGE — COLOR ANALYSIS
-# ─────────────────────────────────────────────
 
 def analyze_banana_image(pil_image):
-    """
-    HSV color analysis to estimate banana ripeness.
-    Returns class 0–4 and a confidence breakdown dict.
-    """
     img = np.array(pil_image.convert("RGB"))
     img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
 
     total_pixels = hsv.shape[0] * hsv.shape[1]
 
-    # HSV masks — tuned for banana color stages
     green_mask  = cv2.inRange(hsv, (35, 40, 40),  (85, 255, 255))
     yellow_mask = cv2.inRange(hsv, (20, 80, 100),  (35, 255, 255))
     brown_mask  = cv2.inRange(hsv, (5,  40, 40),   (20, 200, 180))
@@ -260,34 +243,29 @@ def analyze_banana_image(pil_image):
         "Dark":   round(dark_r * 100, 1),
     }
 
-    # Decision logic
     if dark_r > 0.35:
-        pred = 4  # Severely Rotten
+        pred = 4
     elif dark_r > 0.20 or brown_r > 0.35:
-        pred = 3  # Rotten
+        pred = 3
     elif brown_r > 0.15 or (yellow_r > 0.3 and brown_r > 0.08):
-        pred = 2  # Overripe
+        pred = 2
     elif yellow_r > 0.25 and green_r < 0.15:
-        pred = 1  # Ripe
+        pred = 1
     else:
-        pred = 0  # Underripe
+        pred = 0
 
     return pred, breakdown
 
-# ─────────────────────────────────────────────
 # HEADER
-# ─────────────────────────────────────────────
 
 st.markdown("""
 <div class="banana-header">
-    <h1>🍌 BananaCheck</h1>
+    <h1>BananaCheck</h1>
     <p>Multi-modal banana spoilage detection — sensor data + image analysis combined.</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
 # MODEL SELECTION
-# ─────────────────────────────────────────────
 
 st.subheader("Select Models")
 selected = st.multiselect(
@@ -302,18 +280,16 @@ if not selected:
 
 st.divider()
 
-# ─────────────────────────────────────────────
 # INPUTS + INDIVIDUAL PREDICTIONS
-# ─────────────────────────────────────────────
 
 results = {}
 
 for model_name in selected:
 
-    # ── IMAGE MODEL ──────────────────────────
+    # IMAGE MODEL
     if model_name == "Image Analysis":
         st.markdown('<div class="model-card">', unsafe_allow_html=True)
-        st.markdown('<h3>📷 Image Analysis</h3>', unsafe_allow_html=True)
+        st.markdown('<h3>Image Analysis</h3>', unsafe_allow_html=True)
         st.caption("Upload a clear photo of the banana. Works best with natural lighting.")
 
         img_file = st.file_uploader(
@@ -339,21 +315,21 @@ for model_name in selected:
                         text=f"{color_name}: {pct}%"
                     )
 
-                st.markdown(f"**Result:** {icon} Class {pred} — **{label}**")
+                st.markdown(f"**Result:** Class {pred} — **{label}**")
                 results["Image Analysis"] = pred
         else:
             st.warning("Upload an image to get a prediction.")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── NUMERIC MODELS ───────────────────────
+    # NUMERIC MODELS
     else:
         features = MODEL_FEATURES[model_name]
         path = MODEL_PATHS[model_name]
         model_obj, scaler = load_model(model_name, path, features)
 
         st.markdown('<div class="model-card">', unsafe_allow_html=True)
-        st.markdown(f'<h3>📡 {model_name}</h3>', unsafe_allow_html=True)
+        st.markdown(f'<h3>{model_name}</h3>', unsafe_allow_html=True)
         st.caption(f"{len(features)} input features")
 
         cols = st.columns(3)
@@ -372,15 +348,13 @@ for model_name in selected:
             pred = predict_numeric(model_obj, scaler, values)
             label, icon, color = LABEL_MAP[pred]
             results[model_name] = pred
-            st.success(f"**{icon} Class {pred} — {label}**")
+            st.success(f"Class {pred} — {label}")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
 st.divider()
 
-# ─────────────────────────────────────────────
 # LATE FUSION
-# ─────────────────────────────────────────────
 
 st.subheader("Final Result — Late Fusion")
 
@@ -390,25 +364,25 @@ else:
     st.markdown("**Individual predictions so far:**")
     for name, pred in results.items():
         label, icon, _ = LABEL_MAP[pred]
-        st.markdown(f"- **{name}** → {icon} Class {pred} ({label})")
+        st.markdown(f"- **{name}** — Class {pred} ({label})")
 
-    if st.button("🔀 Fuse & Get Final Prediction", key="fusion_btn"):
+    if st.button("Fuse & Get Final Prediction", key="fusion_btn"):
         final = int(round(np.mean(list(results.values()))))
-        final = max(0, min(4, final))  # clamp to valid range
+        final = max(0, min(4, final))
         label, icon, color = LABEL_MAP[final]
 
         st.markdown(f"""
         <div class="final-result">
-            <h2>{icon} {label}</h2>
+            <h2>{label}</h2>
             <p>Class {final} &nbsp;·&nbsp; Fused from {len(results)} model(s) &nbsp;·&nbsp; Equal weight averaging</p>
         </div>
         """, unsafe_allow_html=True)
 
         if final >= 3:
-            st.error("⚠️ This banana is not suitable for consumption.")
+            st.error("This banana is not suitable for consumption.")
         elif final == 2:
-            st.warning("🟠 Overripe — best used for baking or smoothies.")
+            st.warning("Overripe — best used for baking or smoothies.")
         elif final == 1:
-            st.success("✅ Ripe — good to eat now.")
+            st.success("Ripe — good to eat now.")
         else:
-            st.info("🟢 Underripe — needs more time to ripen.")
+            st.info("Underripe — needs more time to ripen.")
