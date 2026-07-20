@@ -11,5 +11,5 @@ The framework classifies bananas into four categories: **Unripe**, **Ripe**, **O
 
 ## Pipeline
 ![Pipeline](banana_spoilage_detection_pipeline.png)
-
+![full implementation](https://github.com/Arushi1104/implementation_banana)
 ---
